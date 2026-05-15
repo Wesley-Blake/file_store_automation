@@ -7,7 +7,7 @@ from onbaser import *
 
 
 
-with open("onbase\\secret.txt", "r") as f:
+with open("file_store_automation\\secrets.txt", "r") as f:
     primary_id_img = f.readline().strip()
     event_date_img = f.readline().strip()
     onbase_path = Path(f.readline().strip())
