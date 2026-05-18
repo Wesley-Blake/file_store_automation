@@ -4,6 +4,7 @@ import time
 import pyautogui as pag
 import pyperclip
 from onbaser import *
+from ramaing_files import ramaing_files
 
 
 
@@ -40,3 +41,5 @@ for i in range(len(os.listdir())):
         pag.moveTo(go_to_parent, duration=0.3)
         pag.click()
         pag.press('down')
+
+raming_files()
