@@ -1,16 +1,17 @@
 import time
+import shutil
+from pathlib import Path
+from datetime import datetime
 import pyperclip
 import pyautogui as pag
 
 
-def starter(base_dir_path: str) -> None:
+def starter(base_dir_path: Path) -> None:
     first_dir = (1253, 208)
     explor_search_bar = (1677, 63)
-    cancel_box()
-    cancel_box()
     pag.moveTo(explor_search_bar, duration=0.1)
     pag.click()
-    pag.write(base_dir_path, interval=0.03)
+    pag.write(str(base_dir_path), interval=0.03)
     pag.press('enter')
     pag.press('esc')
     pag.moveTo(first_dir, duration=0.1)
@@ -26,6 +27,7 @@ def cancel_box() -> None:
 def copy_file_name() -> str:
     pag.press('f2')
     time.sleep(0.5)
+    pag.hotkey('ctrl','a')
     pag.hotkey('ctrl','c')
     result = pyperclip.paste()
     pag.press('esc')
@@ -40,20 +42,36 @@ def import_doc_box(document_type_name: str) -> None:
     pag.press('enter')
     time.sleep(1)
 
-def file_dragger() -> list:
+def file_dragger(onbase_path: Path, doc_type_name: str, input_path: Path) -> list | None:
     first_file = (1192, 175)
     file_drop = (610, 525)
     pag.moveTo(first_file, duration=0.1)
     pag.leftClick()
-    temp = copy_file_name()
-    result = temp.split(' - ')
+    file_name = copy_file_name()
+    result = file_name.split(' - ')
+    try:
+        datetime.fromisoformat(result[1])
+    except ValueError:
+        return _mover(onbase_path, doc_type_name, input_path, file_name)
     if len(result) < 2:
-        raise ValueError("File name does not contain expected delimiter ' - '")
+        return _mover(onbase_path, doc_type_name, input_path, file_name)
     if not result[0].isdigit():
-        raise ValueError("First part of file name is not numeric")
+        return _mover(onbase_path, doc_type_name, input_path, file_name)
     pag.dragTo(file_drop, duration=0.2)
     time.sleep(3)
     return result
+
+def _mover(onbase_path: Path, doc_type_name: str, input_path: Path, file_name: str) -> None:
+    dst = input_path / file_name
+    src = onbase_path / doc_type_name / file_name
+    if not src.exists():
+        raise FileExistsError(f"Source Doesn't Exist: {src}")
+    elif dst.exists():
+        raise FileExistsError(f"Destination Already Exists: {dst}")
+        _mover(onbase_path, doc_type_name, input_path, file_name + datetime.now().strftime("-%Y%m%d%H%M%S"))
+    else:
+        shutil.move(src, dst)
+    time.sleep(1)
 
 def import_boxes(info: list) -> None:
     document_date = (174, 311)
