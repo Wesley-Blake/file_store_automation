@@ -1,19 +1,26 @@
 import os
 from pathlib import Path
 import time
+import configparser
 import pyautogui as pag
 from onbaser import *
 from remaining_files import remaining_files
 
 
+cfg = configparser.ConfigParser()
+cfg.read('.env')
+if cfg:
+    primary_id_img = cfg['file_store']['p_id_img']
+    event_date_img = cfg['file_store']['event_date_img']
+    onbase_path = Path(cfg['file_store']['onbase_path'])
+    input_path = Path(cfg['file_store']['drop_box_path'])
+else:
+    raise FileNotFoundError("Config file not found: .env")
 
-with open("file_store_automation\\secrets.txt", "r") as f:
-    primary_id_img = f.readline().strip()
-    event_date_img = f.readline().strip()
-    onbase_path = Path(f.readline().strip())
-    input_path = Path(f.readline().strip())
-    if not onbase_path.is_dir() or not input_path.is_dir():
-        raise FileNotFoundError(f"OnBase path not found: {onbase_path}")
+if not onbase_path.is_dir() or not input_path.is_dir():
+    raise FileNotFoundError(f"OnBase path not found: {onbase_path}")
+if not os.path.isfile(primary_id_img) and not os.path.isfile(event_date_img):
+    raise FileNotFoundError(f"Image file not found: {primary_id_img} or {event_date_img}")
 
 starter(onbase_path)
 for i in range(len(os.listdir(str(onbase_path)))):
