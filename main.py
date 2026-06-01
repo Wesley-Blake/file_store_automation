@@ -18,9 +18,14 @@ else:
     raise FileNotFoundError("Config file not found: .env")
 
 if not onbase_path.is_dir() or not input_path.is_dir():
-    raise FileNotFoundError(f"OnBase path not found: {onbase_path}")
+    raise FileNotFoundError(
+        f"OnBase path not found: {onbase_path}"
+    )
+
 if not os.path.isfile(primary_id_img) and not os.path.isfile(event_date_img):
-    raise FileNotFoundError(f"Image file not found: {primary_id_img} or {event_date_img}")
+    raise FileNotFoundError(
+        f"Image file not found: {primary_id_img} or {event_date_img}"
+    )
 
 starter(onbase_path)
 for i in range(len(os.listdir(str(onbase_path)))):

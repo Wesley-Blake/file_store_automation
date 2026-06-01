@@ -6,11 +6,18 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 
+
 class JsonLoggingEventHandler(FileSystemEventHandler):
     def __init__(self, log_file: Path):
         self.log_file = log_file
 
-    def _log_event(self, event_type, src_path, dest_path=None, is_directory=False):
+    def _log_event(
+        self,
+        event_type,
+        src_path,
+        dest_path=None,
+        is_directory=False,
+    ):
         record = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "event_type": event_type,
