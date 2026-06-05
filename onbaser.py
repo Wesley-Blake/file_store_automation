@@ -72,21 +72,16 @@ def _mover(onbase_path: Path,
            doc_type_name: str,
            input_path: Path,
            file_name: str) -> None:
-    dst = input_path / file_name
     src = onbase_path / doc_type_name / file_name
+    dst = input_path / file_name
     if not src.exists():
         raise FileExistsError(
             f"Source Doesn't Exist: {src}"
         )
     elif dst.exists():
-        raise FileExistsError(
-            f"Destination Already Exists: {dst}"
-        )
-        _mover(
-            onbase_path,
-            doc_type_name,
-            input_path,
-            file_name + datetime.now().strftime("-%Y%m%d%H%M%S"),
+        shutil.move(
+            src,
+            input_path / (file_name[:file_name.rfind('.')] + datetime.now().strftime("-%Y%m%d%H%M%S") + file_name[file_name.rfind('.'):]),
         )
     else:
         shutil.move(src, dst)
