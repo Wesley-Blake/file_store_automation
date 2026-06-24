@@ -47,8 +47,10 @@ def copy_file_name() -> str:
 
 
 def import_doc_box(document_type_name: str) -> None:
+    # ocr
     document_type = (227, 232)
     cancel_box()
+    # end ocr
     pag.moveTo(document_type, duration=0.1)
     pag.click()
     pag.write(document_type_name, interval=0.05)
