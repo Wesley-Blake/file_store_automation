@@ -20,6 +20,7 @@ cfg.read('.env')
 if cfg:
     primary_id_img = cfg['file_store']['p_id_img']
     event_date_img = cfg['file_store']['event_date_img']
+    import_button_img = cfg['file_store']['import_button_img']
     onbase_path = Path(cfg['file_store']['onbase_path'])
     input_path = Path(cfg['file_store']['drop_box_path'])
 else:
