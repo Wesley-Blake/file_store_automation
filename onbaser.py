@@ -15,12 +15,6 @@ class FileExplorer():
         drop_box_path: Path,
         first_file_img: Path
     ):
-        if not all(
-            file_store_path.exists(),
-            drop_box_path.exists(),
-            first_file_img.exists()
-        ):
-            raise FileNotFoundError("Args aren't proper paths.")
         self.file_store_path = file_store_path
         self.drop_box_path = drop_box_path
         size_x, size_y = pag.size()
@@ -34,6 +28,7 @@ class FileExplorer():
         self.first_file = (x + w * 0.5, y + h * 1.25)
         self.file_drop = (size_x * 0.35, size_y * 0.5)
         self.focus_first_file = (size_x * 0.75, size_y * 0.75)
+        self._start()
 
 
     def _focus_first_file(self) -> None:
@@ -42,7 +37,7 @@ class FileExplorer():
         # Becuase home doesn't always set the focus.
         pag.press('PgUp')
 
-    def starter(self) -> None:
+    def _start(self) -> None:
         """File explorer function, starter"""
         self._focus_first_file()
         pag.hotkey('ctrl','l')
@@ -51,7 +46,7 @@ class FileExplorer():
         pag.press('enter')
         self._focus_first_file()
 
-    def copy_file_name(self) -> str:
+    def copy_item_name(self) -> str:
         """Copy the name of the first file/dir in file explorer."""
         self._focus_first_file()
         pag.press('f2')
@@ -92,10 +87,8 @@ class FileExplorer():
     def file_dragger(self, doc_type_name: str) -> list | None:
         """Move first file to files storage application."""
         # Brings focus to first file in explorer
-        file_name = self.copy_file_name()
-        # TODO: detect file date format transform to 20260525
-        # TODO: split by '-' only not ' - '
-        result = file_name.split(' - ')
+        file_name = self.copy_item_name()
+        result = file_name.split('-')
         if len(result) < 2:
             return self._mover(doc_type_name, file_name)
         if not result[0].isdigit():
@@ -135,7 +128,9 @@ class FileStore():
         )
         # TODO: future marker for each doc type.
         self.event_date_img = event_date_img
-    def starter(
+        self._start(import_button_img, import_button_check_img)
+
+    def _start(
             self,
             import_button_img: Path,
             import_button_check_img: Path
@@ -168,7 +163,7 @@ class FileStore():
 
     def import_doc_box(self, document_type_name: str) -> None:
         """
-        Set document type box based on folder name from FileExplorer.copy_file_name().
+        Set document type box based on folder name from FileExplorer.copy_item_name().
         """
         # ocr
         self._cancel_box()
