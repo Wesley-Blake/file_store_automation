@@ -128,7 +128,7 @@ class FileStore():
         )
         # TODO: future marker for each doc type.
         self.event_date_img = event_date_img
-        self._start(import_button_img, import_button_check_img)
+        #self._start(import_button_img, import_button_check_img)
 
     def _start(
             self,
