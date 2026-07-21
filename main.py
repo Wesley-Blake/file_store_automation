@@ -1,4 +1,5 @@
 """Main loop to take files from file explorer to file storage software."""
+
 from pathlib import Path
 import configparser
 import pyautogui as pag
@@ -11,17 +12,17 @@ from remaining_files import remaining_files
 
 cfg = configparser.ConfigParser()
 # NOTE: if this fails, the program should fail.
-if not cfg.read('.env'):
+if not cfg.read(".env"):
     raise FileNotFoundError("Either the file is empty or doesn't exist.")
 try:
     # File explorer object
-    root = Path(cfg['file_store']['root'])
-    drop_box = Path(cfg['file_store']['drop_box'])
-    first_file_img = Path(cfg['file_store']['first_file_img'])
+    root = Path(cfg["file_store"]["root"])
+    drop_box = Path(cfg["file_store"]["drop_box"])
+    first_file_img = Path(cfg["file_store"]["first_file_img"])
     # File storage object
-    import_button_img = cfg['file_store']['import_button_img']
-    primary_id_img = Path(cfg['file_store']['p_id_img'])
-    event_date_img = Path(cfg['file_store']['event_date_img'])
+    import_button_img = cfg["file_store"]["import_button_img"]
+    primary_id_img = Path(cfg["file_store"]["p_id_img"])
+    event_date_img = Path(cfg["file_store"]["event_date_img"])
 except Exception as e:
     raise KeyError("It looks like you are missing one or more keys.") from e
 
@@ -46,7 +47,7 @@ while current_dir.name != "zkill":
         continue
     if next(current_dir.iterdir(), None):
         # NOTE: focus on first file.
-        pag.press('enter')
+        pag.press("enter")
         # TODO: do the import box
         store_ob.import_doc_box(current_dir.name)
         for _ in current_dir.iterdir():
@@ -59,7 +60,7 @@ while current_dir.name != "zkill":
         # TODO: go to parrent
         go_to_parent = (1084, 63)
         pag.click(go_to_parent, duration=0.3)
-    pag.press('down')
+    pag.press("down")
 
 # TODO: update path
 remaining_files(input_path)

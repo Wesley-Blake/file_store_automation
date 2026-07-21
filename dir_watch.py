@@ -6,7 +6,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 
-
 class JsonLoggingEventHandler(FileSystemEventHandler):
     def __init__(self, log_file: Path):
         self.log_file = log_file
@@ -36,7 +35,7 @@ class JsonLoggingEventHandler(FileSystemEventHandler):
             is_directory=event.is_directory,
         )
 
-    #def on_modified(self, event):
+    # def on_modified(self, event):
     #    self._log_event(
     #        event_type="modified",
     #        src_path=event.src_path,
