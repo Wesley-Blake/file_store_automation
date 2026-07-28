@@ -1,8 +1,11 @@
+"""Report how many files remain unprocessed under a directory tree."""
+
 from pathlib import Path
 from datetime import datetime
 
 
 def remaining_files(input_path: Path):
+    """Count files per subdirectory of ``input_path`` and append a report to remaining_files.txt."""
     dir_counter = {}
     counter = 0
     # input_path = Path(input("Enter the path to the directory: "))
