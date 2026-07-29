@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pyautogui as pag
 from onbaser import FileExplorer, FileStore, start
+from remaining_files import remaining_files
 
 cfg = configparser.ConfigParser()
 # NOTE: if this fails, the program should fail.
@@ -51,6 +52,7 @@ def main():
             explor_o.focus_explorer_file()
             pag.hotkey("alt", "up")
         pag.press("down")
+    remaining_files(explor_o.drop_box_path)
 
 
 if __name__ == "__main__":

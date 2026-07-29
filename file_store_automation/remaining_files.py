@@ -9,10 +9,13 @@ def remaining_files(input_path: Path):
     # input_path = Path(input("Enter the path to the directory: "))
     if not input_path.is_dir():
         raise SystemExit("The provided path is not a directory.")
-    file_count = 0
+    total = 0
     with open("remaining_files.txt", "a+", encoding="utf-8") as f:
+        file_count = 0
         f.write(f"Generated on: {datetime.now()}\n")
         for root, _, files in input_path.walk():
             file_count += len(files)
-            f.write(f"{file_count=:04d}: {root}\n")
-        f.write(f"Total files: {file_count}\n\n")
+            f.write(f"{file_count=:4d}: {root}\n")
+            total += file_count
+            file_count = 0
+        f.write(f"Total files: {total}\n\n")

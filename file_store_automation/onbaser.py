@@ -19,7 +19,7 @@ def start(import_start_img: str, import_check_img: str, root: str) -> None:
             confidence=0.7,
             region=(int(size_x * 0.2), 0, int(size_x * 0.4), int(size_y * 0.3)),
         )
-        pag.click(center)
+        pag.click(center, duration=1)
     except ImageNotFoundException:
         pass
     except Exception as e:
