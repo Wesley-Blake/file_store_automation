@@ -17,16 +17,14 @@ def start(import_start_img: str, import_check_img: str, root: str) -> None:
         center = pag.locateCenterOnScreen(
             str(import_start_img),
             confidence=0.7,
-            region=(0, 0, int(size_x * 0.5), int(size_y * 0.3)),
+            region=(int(size_x * 0.2), 0, int(size_x * 0.4), int(size_y * 0.3)),
         )
         pag.click(center)
-        time.sleep(2)
-        pag.click(center)
-        time.sleep(2)
+    except ImageNotFoundException:
+        pass
     except Exception as e:
-        raise ImageNotFoundException(
-            f"Could not locate import button image: {import_start_img}"
-        ) from e
+        raise RuntimeError("Something happend, please see error.") from e
+    time.sleep(2)
     try:
         x, y = pag.size()
         pag.locateCenterOnScreen(
@@ -98,7 +96,7 @@ class FileExplorer:
         """Move a file that doesn't match the expected naming pattern to the drop box."""
         src = Path(self.root) / doc_type_name / file_name
         if not src.exists():
-            raise FileExistsError(f"Source Doesn't Exist: {src}")
+            raise FileNotFoundError(f"Source Doesn't Exist: {src}")
         shutil.move(
             src,
             self.drop_box_path / self._insert_day_time(file_name),
@@ -124,14 +122,20 @@ class FileExplorer:
         # Move mouse to first file.
         pag.moveTo(self._file_drag_region)
         pag.dragTo(self._file_drop, duration=0.3)
-        # I want this image to catch the loading bar
-        count = 0
-        interval = 0.1
-        save_to = Path.home() / "Downloads"
-        while count < 2:
-            pag.screenshot(f"{save_to / f'file_drag{count}.png'}")
-            time.sleep(interval)
-            count += interval
+        # NOTE: Lazy for now.
+        count = 10
+        while not pag.pixelMatchesColor(440, 180, (59, 59, 59)):
+            time.sleep(0.1)
+            count -= 1
+            if count == 0:
+                raise SystemExit("Something went wrong at file import.")
+        # count = 0
+        # interval = 0.1
+        # save_to = Path.home() / "Downloads"
+        # while count < 2:
+        #    pag.screenshot(f"{save_to / f'file_drag{count:.2f}.png'}")
+        #    time.sleep(interval)
+        #    count += interval
         return result[:2]  # I only care about first two elements
 
 
@@ -146,34 +150,32 @@ class FileStore:
         date_box_img: str,
     ):
         """Open the import dialog and locate on-screen fields via image recognition."""
-        size_x, size_y = pag.size()
         # Region for fields entry.
+        self.size = pag.size()
         self.info: list = []
-        self._region = (0, 0, int(size_x * 0.5), size_y)
         self._primary_id_img = primary_id_img
         self._doc_type = pag.locateCenterOnScreen(
             doc_type_img,
             confidence=0.9,
-            region=(0, 0, int(size_x * 0.25), int(size_y * 0.25)),
+            region=(0, 0, int(self.size.width * 0.25), int(self.size.height * 0.25)),
         )
         self.cancel_box = pag.locateCenterOnScreen(
             cancel_box_img,
             confidence=0.9,
-            region=(0, 0, int(size_x * 0.25), int(size_y * 0.3)),
+            region=(0, 0, int(self.size.width * 0.25), int(self.size.height * 0.3)),
         )
         self._date_field = pag.locateCenterOnScreen(
             date_box_img,
             confidence=0.9,
-            region=(0, 0, int(size_x * 0.25), int(size_y * 0.4)),
+            region=(0, 0, int(self.size.width * 0.25), int(self.size.height * 0.4)),
         )
-        # Lazy for now.
-        self._complete = (int(size_x * 0.05), int(size_y * 0.92))
+        # NOTE: Lazy for now.
+        self._complete = (int(self.size.width * 0.05), int(self.size.height * 0.92))
         # End lazy approach for locating complete button.
 
     def _cancel(self) -> None:
         """Click the cancel/close control and pause briefly for the UI to catch up."""
-        time.sleep(0.5)
-        pag.click(self.cancel_box)
+        pag.click(self.cancel_box, duration=0.5)
         # Give the program a moment to catch up.
         time.sleep(0.5)
 
@@ -204,25 +206,30 @@ class FileStore:
             pag.write(self.info[1])
             pag.press("tab")
         try:
-            x, y = pag.size()
             primary_id = pag.locateCenterOnScreen(
                 self._primary_id_img,
                 confidence=0.7,
-                region=(0, 0, int(x * 0.2), int(y * 0.5)),
+                region=(0, 0, int(self.size.width * 0.2), int(self.size.height * 0.5)),
             )
-            pag.click(primary_id)
-            pag.write(self.info[0])
-            pag.press("tab")
         except Exception as e:
             raise ImageNotFoundException("Couldn't find primary ID field.") from e
+        pag.click(primary_id)
+        pag.write(self.info[0])
+        pag.press("tab")
 
     def complete(self) -> None:
         """Click the complete/submit button to finish importing the current file."""
         pag.click(self._complete, duration=0.1)
-        count = 0
-        interval = 0.1
-        save_to = Path.home() / "Downloads"
-        while count < 2:
-            pag.screenshot(f"{save_to / f'complete_button{count}.png'}")
-            time.sleep(interval)
-            count += interval
+        count = 10
+        while not pag.pixelMatchesColor(440, 180, (255, 255, 255)):
+            time.sleep(0.1)
+            count -= 1
+            if count == 0:
+                raise SystemExit("Something went wrong at complete.")
+        # count = 0
+        # interval = 0.1
+        # save_to = Path.home() / "Downloads"
+        # while count < 2:
+        #    pag.screenshot(f"{save_to / f'complete_button{count}.png'}")
+        #    time.sleep(interval)
+        #    count += interval

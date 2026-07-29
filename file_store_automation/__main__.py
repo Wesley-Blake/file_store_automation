@@ -4,7 +4,6 @@ import configparser
 from pathlib import Path
 
 import pyautogui as pag
-
 from onbaser import FileExplorer, FileStore, start
 
 cfg = configparser.ConfigParser()
