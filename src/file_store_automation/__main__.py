@@ -4,8 +4,9 @@ import configparser
 from pathlib import Path
 
 import pyautogui as pag
-from onbaser import FileExplorer, FileStore, start
-from remaining_files import remaining_files
+
+from .onbaser import FileExplorer, FileStore, start
+from .remaining_files import remaining_files
 
 cfg = configparser.ConfigParser()
 # NOTE: if this fails, the program should fail.
