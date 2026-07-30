@@ -1,6 +1,6 @@
 """Report how many files remain unprocessed under a directory tree."""
 
-from datetime import datetime
+import datetime
 from pathlib import Path
 
 
@@ -12,7 +12,7 @@ def remaining_files(input_path: Path):
     total = 0
     with open("remaining_files.txt", "a+", encoding="utf-8") as f:
         file_count = 0
-        f.write(f"Generated on: {datetime.now()}\n")
+        f.write(f"Generated on: {datetime.datetime.now(tz=datetime.UTC)}\n")
         for root, _, files in input_path.walk():
             file_count += len(files)
             f.write(f"{file_count=:4d}: {root}\n")

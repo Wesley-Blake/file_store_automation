@@ -1,8 +1,8 @@
 """pyautogui logic to navigate File explorer or file storage software."""
 
+import datetime
 import shutil
 import time
-from datetime import datetime
 from pathlib import Path
 
 import pyautogui as pag
@@ -88,7 +88,7 @@ class FileExplorer:
         this will add date&time stamp to the end of the file name before the extention.
         """
         root = file_name[: file_name.rfind(".")]
-        date_time = datetime.now().strftime("%Y%m%d%H%M%S")
+        date_time = datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
         extention = file_name[file_name.rfind(".") :]
         return root + date_time + extention
 
@@ -116,17 +116,17 @@ class FileExplorer:
         if not result[0].isdigit():
             return self._mover(doc_type_name, file_name)
         try:
-            datetime.fromisoformat(result[1])
+            datetime.datetime.fromisoformat(result[1])
         except ValueError:
             return self._mover(doc_type_name, file_name)
         # Move mouse to first file.
         pag.moveTo(self._file_drag_region)
         pag.dragTo(self._file_drop, duration=0.3)
         # NOTE: Lazy for now.
-        count = 10
+        count = 5
         while not pag.pixelMatchesColor(440, 180, (59, 59, 59)):
             time.sleep(0.1)
-            count -= 1
+            count -= 0.1
             if count == 0:
                 raise SystemExit("Something went wrong at file import.")
         # count = 0
@@ -220,10 +220,10 @@ class FileStore:
     def complete(self) -> None:
         """Click the complete/submit button to finish importing the current file."""
         pag.click(self._complete, duration=0.1)
-        count = 10
+        count = 5
         while not pag.pixelMatchesColor(440, 180, (255, 255, 255)):
             time.sleep(0.1)
-            count -= 1
+            count -= 0.1
             if count == 0:
                 raise SystemExit("Something went wrong at complete.")
         # count = 0
