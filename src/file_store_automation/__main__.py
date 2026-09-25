@@ -4,6 +4,8 @@ import configparser
 from pathlib import Path
 
 import pyautogui as pag
+
+pag.PAUSE = 0.2
 from onbaser import FileExplorer, FileStore, start
 from remaining_files import remaining_files
 

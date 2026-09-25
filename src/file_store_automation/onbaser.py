@@ -15,22 +15,23 @@ def start(import_start_img: str, import_check_img: str, root: str) -> None:
     size_x, size_y = pag.size()
     try:
         center = pag.locateCenterOnScreen(
-            str(import_start_img),
+            # str(import_start_img),
+            import_start_img,
             confidence=0.7,
             region=(int(size_x * 0.2), 0, int(size_x * 0.4), int(size_y * 0.3)),
         )
         pag.click(center, duration=1)
-    except ImageNotFoundException:
-        pass
+    # except ImageNotFoundException:
+    #    pass
     except Exception as e:
         raise RuntimeError("Something happend, please see error.") from e
+    # pyautogui is faster then the program, it needs a few seconds.
     time.sleep(2)
     try:
-        x, y = pag.size()
         pag.locateCenterOnScreen(
             import_check_img,
             confidence=0.7,
-            region=(0, int(y * 0.8), int(x * 0.25), y),
+            region=(0, int(size_y * 0.8), int(size_x * 0.25), size_y),
         )
     except Exception as e:
         raise ImageNotFoundException(
@@ -71,10 +72,13 @@ class FileExplorer:
         pag.press("home")
         # Becuase home doesn't always set the focus.
         pag.press("PgUp")
+        pag.press("f5")
 
     def copy_item_name(self) -> str:
         """Copy the name of the first file/dir in file explorer."""
+        # time.sleep(0.5)
         pag.press("f2")
+        # time.sleep(0.5)
         # We want to the fix extention just incase it isn't valid.
         pag.hotkey("ctrl", "a")
         pag.hotkey("ctrl", "c")
@@ -107,6 +111,7 @@ class FileExplorer:
     def file_dragger(self, doc_type_name: str) -> list | None:
         """Drag first file into file storage app, or move it to the drop box if misnamed."""
         # Brings focus to first file in explorer
+        # time.sleep(2)
         file_name = self.copy_item_name()
         if not file_name.endswith(".pdf"):
             return self._mover(doc_type_name, file_name)
@@ -120,22 +125,22 @@ class FileExplorer:
         except ValueError:
             return self._mover(doc_type_name, file_name)
         # Move mouse to first file.
-        pag.moveTo(self._file_drag_region)
+        count = 30
+        while tuple(pag.position()) != self._file_drag_region:
+            time.sleep(0.5)
+            pag.moveTo(self._file_drag_region)
+            count -= 1
+            if count == 0:
+                raise SystemExit("Couldn't go to file drag location in explorer.")
+        # time.sleep(1)
         pag.dragTo(self._file_drop, duration=0.3)
         # NOTE: Lazy for now.
-        count = 5
+        count = 30
         while not pag.pixelMatchesColor(440, 180, (59, 59, 59)):
-            time.sleep(0.1)
-            count -= 0.1
+            time.sleep(0.5)
+            count -= 1
             if count == 0:
                 raise SystemExit("Something went wrong at file import.")
-        # count = 0
-        # interval = 0.1
-        # save_to = Path.home() / "Downloads"
-        # while count < 2:
-        #    pag.screenshot(f"{save_to / f'file_drag{count:.2f}.png'}")
-        #    time.sleep(interval)
-        #    count += interval
         return result[:2]  # I only care about first two elements
 
 
@@ -175,27 +180,48 @@ class FileStore:
 
     def _cancel(self) -> None:
         """Click the cancel/close control and pause briefly for the UI to catch up."""
-        pag.click(self.cancel_box, duration=0.5)
+        count = 30
+        while tuple(pag.position()) != self.cancel_box:
+            pag.moveTo(self.cancel_box)
+            time.sleep(0.5)
+            count -= 1
+            if count == 0:
+                raise SystemExit("Failed to find cancel button.")
+        pag.click(self.cancel_box)
         # Give the program a moment to catch up.
-        time.sleep(0.5)
+        # time.sleep(0.5)
 
     def import_doc_box(self, document_type_name: str) -> None:
         """
         Set document type box based on folder name from FileExplorer.copy_item_name().
         """
         self._cancel()
+        count = 30
+        while tuple(pag.position()) != self._doc_type:
+            pag.moveTo(self._doc_type)
+            time.sleep(0.5)
+            count -= 1
+            if count == 0:
+                raise SystemExit("Failed to find doc type in file store.")
         pag.click(self._doc_type)
         pag.write(document_type_name)
         pag.press("enter")
 
     def _date_box(self) -> None:
         """Clear the date field and write the date parsed from the file name."""
+        count = 30
+        while tuple(pag.position()) != self._date_field:
+            pag.moveTo(self._date_field)
+            time.sleep(0.5)
+            count -= 1
+            if count == 0:
+                raise SystemExit("Failed to find doc type in file store.")
         pag.click(self._date_field)
         pag.hotkey("ctrl", "a")
-        time.sleep(0.1)
+        # time.sleep(0.1)
         pag.write(self.info[1])
-        pag.press("tab")
-        pag.press("tab")
+        # pag.press("tab")
+        # pag.press("tab")
 
     def keyword_boxes(self) -> None:
         """Insert info from file name to field boxes."""
@@ -213,23 +239,33 @@ class FileStore:
             )
         except Exception as e:
             raise ImageNotFoundException("Couldn't find primary ID field.") from e
+        count = 30
+        while tuple(pag.position()) != primary_id:
+            pag.moveTo(primary_id)
+            time.sleep(0.5)
+            count -= 1
+            if count == 0:
+                raise SystemExit("Failed to find primary_id feild.")
         pag.click(primary_id)
         pag.write(self.info[0])
         pag.press("tab")
 
     def complete(self) -> None:
         """Click the complete/submit button to finish importing the current file."""
-        pag.click(self._complete, duration=0.1)
-        count = 5
+        count = 30
+        while tuple(pag.position()) != self._complete:
+            pag.moveTo(self._complete)
+            time.sleep(0.5)
+            count -= 1
+            if count == 0:
+                raise SystemExit("Failed to find primary_id feild.")
+        pag.click(self._complete)
+        count = 30
         while not pag.pixelMatchesColor(440, 180, (255, 255, 255)):
             time.sleep(0.1)
-            count -= 0.1
+            count -= 1
+            pag.click(self._complete)
             if count == 0:
                 raise SystemExit("Something went wrong at complete.")
-        # count = 0
-        # interval = 0.1
-        # save_to = Path.home() / "Downloads"
-        # while count < 2:
-        #    pag.screenshot(f"{save_to / f'complete_button{count}.png'}")
-        #    time.sleep(interval)
-        #    count += interval
+            if count < 30:
+                pag.click(self._complete, duration=0.1)
