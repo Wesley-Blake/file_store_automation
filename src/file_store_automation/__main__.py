@@ -7,6 +7,7 @@ import pyautogui as pag
 
 pag.PAUSE = 0.2
 from onbaser import FileExplorer, FileStore, start
+from redact import redact
 from remaining_files import remaining_files
 
 cfg = configparser.ConfigParser()
@@ -42,15 +43,17 @@ def main():
         if next(current_dir.iterdir(), None) is not None:
             pag.press("enter")
             store_o.import_doc_box(current_dir.name)
-            for item in current_dir.iterdir():
+            for _ in current_dir.iterdir():
                 explor_o.focus_explorer_file()
                 store_o.info = explor_o.file_dragger(current_dir.name)
                 if store_o.info is None:
                     continue
                 store_o.keyword_boxes()
                 store_o.complete()
-                with open("log.log", "a+", encoding="utf-8") as log_file:
-                    log_file.write(f"{current_dir.name}: {item}\n")
+                with open("log.log", "a", encoding="utf-8") as log_file:
+                    log_file.write(
+                        f"{current_dir.name}: {redact(explor_o.last_file_name)}\n"
+                    )
             explor_o.focus_explorer_file()
             pag.hotkey("alt", "up")
         pag.press("down")

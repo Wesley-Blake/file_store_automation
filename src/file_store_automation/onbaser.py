@@ -3,11 +3,59 @@
 import datetime
 import shutil
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pyautogui as pag
 import pyperclip
 from pyautogui import ImageNotFoundException
+
+RETRIES = 30
+EMPTY_DATE_MASK = "    -  -  "
+
+
+def _focus_point() -> tuple[float, float]:
+    """Point inside File Explorer's file list used to give it focus."""
+    size_x, size_y = pag.size()
+    return (size_x * 0.75, size_y * 0.75)
+
+
+def _focus_first_item() -> None:
+    """Click into File Explorer and move focus to the first item in the list."""
+    pag.click(_focus_point())
+    pag.press("home")
+    # Becuase home doesn't always set the focus.
+    pag.press("PgUp")
+
+
+def _move_and_click(point, err_msg: str, click: bool = True, **click_kwargs) -> None:
+    """Move the mouse to ``point`` until it arrives, then optionally click it."""
+    for _ in range(RETRIES):
+        if tuple(pag.position()) == tuple(point):
+            break
+        pag.moveTo(point)
+        time.sleep(0.5)
+    else:
+        raise SystemExit(err_msg)
+    if click:
+        pag.click(point, **click_kwargs)
+
+
+def _wait_for_pixel(
+    rgb: tuple[int, int, int],
+    err_msg: str,
+    interval: float,
+    on_retry: Callable[[], None] | None = None,
+) -> None:
+    """Wait until the status pixel matches ``rgb``, calling ``on_retry`` between checks."""
+    for _ in range(RETRIES):
+        # NOTE: Lazy for now.
+        if pag.pixelMatchesColor(440, 180, rgb):
+            return
+        time.sleep(interval)
+        if on_retry is not None:
+            on_retry()
+    raise SystemExit(err_msg)
 
 
 def start(import_start_img: str, import_check_img: str, root: str) -> None:
@@ -15,14 +63,11 @@ def start(import_start_img: str, import_check_img: str, root: str) -> None:
     size_x, size_y = pag.size()
     try:
         center = pag.locateCenterOnScreen(
-            # str(import_start_img),
             import_start_img,
             confidence=0.7,
             region=(int(size_x * 0.2), 0, int(size_x * 0.4), int(size_y * 0.3)),
         )
         pag.click(center, duration=1)
-    # except ImageNotFoundException:
-    #    pass
     except Exception as e:
         raise RuntimeError("Something happend, please see error.") from e
     # pyautogui is faster then the program, it needs a few seconds.
@@ -38,15 +83,25 @@ def start(import_start_img: str, import_check_img: str, root: str) -> None:
             f"Could not locate import button check image: {import_check_img}"
         ) from e
 
-    pag.click((size_x * 0.75, size_y * 0.75))
-    pag.press("home")
-    pag.press("PgUp")
+    _focus_first_item()
     pag.press("f4")
     pag.write(root)
     pag.press("enter")
-    pag.click((size_x * 0.75, size_y * 0.75))
-    pag.press("home")
-    pag.press("PgUp")
+    _focus_first_item()
+
+
+def _is_valid_name(file_name: str) -> bool:
+    """True if ``file_name`` looks like ``<digits>-<iso date>...pdf``."""
+    if not file_name.endswith(".pdf"):
+        return False
+    parts = file_name.split("-")
+    if len(parts) < 2 or not parts[0].isdigit():
+        return False
+    try:
+        datetime.datetime.fromisoformat(parts[1])
+    except ValueError:
+        return False
+    return True
 
 
 class FileExplorer:
@@ -56,8 +111,8 @@ class FileExplorer:
         """Locate the file-drag anchor image and open File Explorer at ``root``."""
         self.root = root
         self.drop_box_path = Path(drop_box_path)
+        self.last_file_name = ""
         size_x, size_y = pag.size()
-        self._focus_explorer = (size_x * 0.75, size_y * 0.75)
         self._file_drop = (size_x * 0.35, size_y * 0.5)
         temp = pag.locateOnScreen(
             file_drag,
@@ -67,18 +122,13 @@ class FileExplorer:
         self._file_drag_region = (int(temp.left * 1.25), int(temp.top * 1.9))
 
     def focus_explorer_file(self) -> None:
-        """Click into File Explorer and move focus to the first item in the list."""
-        pag.click(self._focus_explorer)
-        pag.press("home")
-        # Becuase home doesn't always set the focus.
-        pag.press("PgUp")
+        """Click into File Explorer, focus the first item, and refresh."""
+        _focus_first_item()
         pag.press("f5")
 
     def copy_item_name(self) -> str:
         """Copy the name of the first file/dir in file explorer."""
-        # time.sleep(0.5)
         pag.press("f2")
-        # time.sleep(0.5)
         # We want to the fix extention just incase it isn't valid.
         pag.hotkey("ctrl", "a")
         pag.hotkey("ctrl", "c")
@@ -86,15 +136,15 @@ class FileExplorer:
         pag.press("esc")
         return result
 
-    def _insert_day_time(self, file_name: str) -> str:
+    @staticmethod
+    def _insert_day_time(file_name: str) -> str:
         """
         If file doesn't match expected result and the file already exists in dropbox,
         this will add date&time stamp to the end of the file name before the extention.
         """
-        root = file_name[: file_name.rfind(".")]
+        path = Path(file_name)
         date_time = datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
-        extention = file_name[file_name.rfind(".") :]
-        return root + date_time + extention
+        return path.stem + date_time + path.suffix
 
     def _mover(self, doc_type_name: str, file_name: str) -> None:
         """Move a file that doesn't match the expected naming pattern to the drop box."""
@@ -110,38 +160,18 @@ class FileExplorer:
 
     def file_dragger(self, doc_type_name: str) -> list | None:
         """Drag first file into file storage app, or move it to the drop box if misnamed."""
-        # Brings focus to first file in explorer
-        # time.sleep(2)
         file_name = self.copy_item_name()
-        if not file_name.endswith(".pdf"):
+        self.last_file_name = file_name
+        if not _is_valid_name(file_name):
             return self._mover(doc_type_name, file_name)
-        result = file_name.split("-")
-        if not result or len(result) < 2:
-            return self._mover(doc_type_name, file_name)
-        if not result[0].isdigit():
-            return self._mover(doc_type_name, file_name)
-        try:
-            datetime.datetime.fromisoformat(result[1])
-        except ValueError:
-            return self._mover(doc_type_name, file_name)
-        # Move mouse to first file.
-        count = 30
-        while tuple(pag.position()) != self._file_drag_region:
-            time.sleep(0.5)
-            pag.moveTo(self._file_drag_region)
-            count -= 1
-            if count == 0:
-                raise SystemExit("Couldn't go to file drag location in explorer.")
-        # time.sleep(1)
+        _move_and_click(
+            self._file_drag_region,
+            "Couldn't go to file drag location in explorer.",
+            click=False,
+        )
         pag.dragTo(self._file_drop, duration=0.3)
-        # NOTE: Lazy for now.
-        count = 30
-        while not pag.pixelMatchesColor(440, 180, (59, 59, 59)):
-            time.sleep(0.5)
-            count -= 1
-            if count == 0:
-                raise SystemExit("Something went wrong at file import.")
-        return result[:2]  # I only care about first two elements
+        _wait_for_pixel((59, 59, 59), "Something went wrong at file import.", 0.5)
+        return file_name.split("-")[:2]  # I only care about first two elements
 
 
 class FileStore:
@@ -179,58 +209,33 @@ class FileStore:
         # End lazy approach for locating complete button.
 
     def _cancel(self) -> None:
-        """Click the cancel/close control and pause briefly for the UI to catch up."""
-        count = 30
-        while tuple(pag.position()) != self.cancel_box:
-            pag.moveTo(self.cancel_box)
-            time.sleep(0.5)
-            count -= 1
-            if count == 0:
-                raise SystemExit("Failed to find cancel button.")
-        pag.click(self.cancel_box)
-        # Give the program a moment to catch up.
-        # time.sleep(0.5)
+        """Click the cancel/close control."""
+        _move_and_click(self.cancel_box, "Failed to find cancel button.")
 
     def import_doc_box(self, document_type_name: str) -> None:
         """
         Set document type box based on folder name from FileExplorer.copy_item_name().
         """
         self._cancel()
-        count = 30
-        while tuple(pag.position()) != self._doc_type:
-            pag.moveTo(self._doc_type)
-            time.sleep(0.5)
-            count -= 1
-            if count == 0:
-                raise SystemExit("Failed to find doc type in file store.")
-        pag.click(self._doc_type)
+        _move_and_click(self._doc_type, "Failed to find doc type in file store.")
         pag.write(document_type_name)
         pag.press("enter")
 
     def _date_box(self) -> None:
         """Clear the date field and write the date parsed from the file name."""
-        count = 30
-        while tuple(pag.position()) != self._date_field:
-            pag.moveTo(self._date_field)
-            time.sleep(0.5)
-            count -= 1
-            if count == 0:
-                raise SystemExit("Failed to find doc type in file store.")
-        pag.click(self._date_field)
+        _move_and_click(self._date_field, "Failed to find date field in file store.")
         pag.hotkey("ctrl", "a")
-        # time.sleep(0.1)
         pag.write(self.info[1])
-        # pag.press("tab")
-        # pag.press("tab")
+        # Retry once if the field didn't take the date.
+        pag.hotkey("ctrl", "a")
+        pag.hotkey("ctrl", "c")
+        if pyperclip.paste() == EMPTY_DATE_MASK:
+            pag.write(self.info[1])
+            pag.press("tab")
 
     def keyword_boxes(self) -> None:
         """Insert info from file name to field boxes."""
         self._date_box()
-        pag.hotkey("ctrl", "a")
-        pag.hotkey("ctrl", "c")
-        if pyperclip.paste() == "    -  -  ":
-            pag.write(self.info[1])
-            pag.press("tab")
         try:
             primary_id = pag.locateCenterOnScreen(
                 self._primary_id_img,
@@ -239,33 +244,16 @@ class FileStore:
             )
         except Exception as e:
             raise ImageNotFoundException("Couldn't find primary ID field.") from e
-        count = 30
-        while tuple(pag.position()) != primary_id:
-            pag.moveTo(primary_id)
-            time.sleep(0.5)
-            count -= 1
-            if count == 0:
-                raise SystemExit("Failed to find primary_id feild.")
-        pag.click(primary_id)
+        _move_and_click(primary_id, "Failed to find primary_id field.")
         pag.write(self.info[0])
         pag.press("tab")
 
     def complete(self) -> None:
         """Click the complete/submit button to finish importing the current file."""
-        count = 30
-        while tuple(pag.position()) != self._complete:
-            pag.moveTo(self._complete)
-            time.sleep(0.5)
-            count -= 1
-            if count == 0:
-                raise SystemExit("Failed to find primary_id feild.")
-        pag.click(self._complete)
-        count = 30
-        while not pag.pixelMatchesColor(440, 180, (255, 255, 255)):
-            time.sleep(0.1)
-            count -= 1
-            pag.click(self._complete)
-            if count == 0:
-                raise SystemExit("Something went wrong at complete.")
-            if count < 30:
-                pag.click(self._complete, duration=0.1)
+        _move_and_click(self._complete, "Failed to find complete button.")
+        _wait_for_pixel(
+            (255, 255, 255),
+            "Something went wrong at complete.",
+            0.1,
+            on_retry=lambda: pag.click(self._complete, duration=0.1),
+        )
